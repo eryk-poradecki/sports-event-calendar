@@ -1,0 +1,21 @@
+services:
+  database:
+    container_name: sports-calendar-db
+    image: "postgres:18.3"
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+    networks:
+      - backend-network
+    volumes:
+      - ./db-data/:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+networks:
+  backend-network:
+    driver: bridge
