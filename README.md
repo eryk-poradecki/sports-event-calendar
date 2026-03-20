@@ -48,3 +48,19 @@ fix the migration first, then force the migration version:
 ```bash
 docker compose --profile utils run --rm migrations /migrate --force-version=[n]
 ```
+
+## Seeding the database with exemplary data
+
+Seed all files from /seeds
+```bash
+docker compose run --rm migrations /migrate --seed
+```
+
+Seed one file from given path
+```bash
+docker compose run --rm migrations /migrate --seed --seeds-path=[path] --seed-file-name=[file_name]
+```
+
+TODO:
+- [ ] add create event data validation
+- [ ] move get events validation part to a helper function
