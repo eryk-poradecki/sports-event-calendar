@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -125,6 +126,54 @@ func forceVersion(db *sql.DB, migrationsPath string, version int) error {
 	return nil
 }
 
+func runSQLFile(db *sql.DB, path string) error {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("could not read seed file %s: %w", path, err)
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("could not start transaction for %s: %w", path, err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(string(contents)); err != nil {
+		return fmt.Errorf("could not execute seed file %s: %w", path, err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("could not commit seed file %s: %w", path, err)
+	}
+
+	return nil
+}
+
+func seedDatabase(db *sql.DB, seedsPath, seedName string) error {
+	if seedsPath == "" {
+		return fmt.Errorf("seed path cannot be empty")
+	}
+	if seedName != "" {
+		return runSQLFile(db, filepath.Join(seedsPath, seedName))
+	}
+
+	files, err := os.ReadDir(seedsPath)
+	if err != nil {
+		return fmt.Errorf("could not read seed directory %s: %w", seedsPath, err)
+	}
+
+	for _, f := range files {
+		if f.IsDir() || filepath.Ext(f.Name()) != ".sql" {
+			continue
+		}
+
+		if err := runSQLFile(db, filepath.Join(seedsPath, f.Name())); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func main() {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
@@ -146,6 +195,9 @@ func main() {
 	steps := flag.Int("steps", 0, "number of migration steps to rollback")
 	downAll := flag.Bool("down-all", false, "rollback all migrations")
 	fVersion := flag.Int("force-version", -1, "force migration version and clear dirty state")
+	seed := flag.Bool("seed", false, "seed the database")
+	seedsPath := flag.String("seeds-path", "/seeds", "path to seed files")
+	seedFileName := flag.String("seed-file-name", "", "name of the seed file")
 
 	flag.Parse()
 
@@ -159,13 +211,16 @@ func main() {
 	if *fVersion >= 0 {
 		selectedActions++
 	}
+	if *seed {
+		selectedActions++
+	}
 
 	if selectedActions == 0 {
-		log.Fatalf("one of --up, -down, or --force-version must be provided")
+		log.Fatalf("one of --up, -down, --force-version, or --seed must be provided")
 	}
 
 	if selectedActions > 1 {
-		log.Fatal("--up, --down, and --force-version are mutually exclusive")
+		log.Fatal("--up, --down, --force-version, and --seed are mutually exclusive")
 	}
 
 	if *down && *downAll && *steps > 0 {
@@ -194,5 +249,12 @@ func main() {
 		}
 	}
 
-	log.Println("Database connection and migrations ran successfully")
+	if *seed == true {
+		err := seedDatabase(db, *seedsPath, *seedFileName)
+		if err != nil {
+			log.Fatalf("failed to seed database: %v", err)
+		}
+	}
+
+	log.Println("Database command completed successfully")
 }

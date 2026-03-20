@@ -17,6 +17,7 @@ WORKDIR /
 COPY --from=builder /main /main
 COPY --from=builder /migrate /migrate
 COPY --from=builder /app/migrations /migrations
+COPY --from=builder /app/seeds /seeds
 
 EXPOSE 8080
 CMD ["/main"]
