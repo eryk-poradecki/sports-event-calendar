@@ -60,7 +60,3 @@ Seed one file from given path
 ```bash
 docker compose run --rm migrations /migrate --seed --seeds-path=[path] --seed-file-name=[file_name]
 ```
-
-TODO:
-- [ ] add create event data validation
-- [ ] move get events validation part to a helper function

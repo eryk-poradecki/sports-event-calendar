@@ -6,6 +6,66 @@ import (
 	"fmt"
 )
 
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanEvent(scanner rowScanner) (*Event, error) {
+	var ev Event
+	var evNullable eventNullableFields
+
+	err := scanner.Scan(
+		&ev.ID,
+		&ev.SportID,
+		&evNullable.CompetitionID,
+		&evNullable.VenueID,
+		&ev.HomeTeamID,
+		&ev.AwayTeamID,
+		&ev.StartTime,
+		&ev.Status,
+		&evNullable.HomeScore,
+		&evNullable.AwayScore,
+		&evNullable.Description,
+		&ev.IsNeutralVenue,
+		&ev.CreatedAt,
+		&ev.UpdatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("could not get event: %w", err)
+	}
+
+	if evNullable.CompetitionID.Valid {
+		v := uint64(evNullable.CompetitionID.Int64)
+		ev.CompetitionID = &v
+	}
+
+	if evNullable.VenueID.Valid {
+		v := uint64(evNullable.VenueID.Int64)
+		ev.VenueID = &v
+	}
+
+	if evNullable.HomeScore.Valid {
+		v := int(evNullable.HomeScore.Int64)
+		ev.HomeScore = &v
+	}
+
+	if evNullable.AwayScore.Valid {
+		v := int(evNullable.AwayScore.Int64)
+		ev.AwayScore = &v
+	}
+
+	if evNullable.Description.Valid {
+		v := evNullable.Description.String
+		ev.Description = &v
+	}
+
+	return &ev, nil
+}
+
 func GetByID(db *sql.DB, id uint64) (*Event, error) {
 	const query = `
 		SELECT
@@ -27,63 +87,8 @@ func GetByID(db *sql.DB, id uint64) (*Event, error) {
 		WHERE id = $1;
 	`
 
-	var ev Event
-
-	var competitionID sql.NullInt64
-	var venueID sql.NullInt64
-	var homeScore sql.NullInt64
-	var awayScore sql.NullInt64
-	var description sql.NullString
-
-	err := db.QueryRow(query, id).Scan(
-		&ev.ID,
-		&ev.SportID,
-		&competitionID,
-		&venueID,
-		&ev.HomeTeamID,
-		&ev.AwayTeamID,
-		&ev.StartTime,
-		&ev.Status,
-		&homeScore,
-		&awayScore,
-		&description,
-		&ev.IsNeutralVenue,
-		&ev.CreatedAt,
-		&ev.UpdatedAt,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("event with id %d: %w", id, sql.ErrNoRows)
-		}
-		return nil, fmt.Errorf("could not get event by id: %w", err)
-	}
-
-	if competitionID.Valid {
-		v := uint64(competitionID.Int64)
-		ev.CompetitionID = &v
-	}
-
-	if venueID.Valid {
-		v := uint64(venueID.Int64)
-		ev.VenueID = &v
-	}
-
-	if homeScore.Valid {
-		v := int(homeScore.Int64)
-		ev.HomeScore = &v
-	}
-
-	if awayScore.Valid {
-		v := int(awayScore.Int64)
-		ev.AwayScore = &v
-	}
-
-	if description.Valid {
-		v := description.String
-		ev.Description = &v
-	}
-
-	return &ev, nil
+	scanner := db.QueryRow(query, id)
+	return scanEvent(scanner)
 }
 
 func GetAll(db *sql.DB) ([]Event, error) {
@@ -111,69 +116,20 @@ func GetAll(db *sql.DB) ([]Event, error) {
 
 	rows, err := db.Query(query)
 	if err != nil {
-		return events, fmt.Errorf("could not get events: %w", err)
+		return nil, fmt.Errorf("could not get events: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var ev Event
-
-		var competitionID sql.NullInt64
-		var venueID sql.NullInt64
-		var homeScore sql.NullInt64
-		var awayScore sql.NullInt64
-		var description sql.NullString
-
-		err := rows.Scan(
-			&ev.ID,
-			&ev.SportID,
-			&competitionID,
-			&venueID,
-			&ev.HomeTeamID,
-			&ev.AwayTeamID,
-			&ev.StartTime,
-			&ev.Status,
-			&homeScore,
-			&awayScore,
-			&description,
-			&ev.IsNeutralVenue,
-			&ev.CreatedAt,
-			&ev.UpdatedAt,
-		)
+		ev, err := scanEvent(rows)
 		if err != nil {
-			return events, fmt.Errorf("could not scan event row: %w", err)
+			return nil, fmt.Errorf("could not get events: %w", err)
 		}
 
-		if competitionID.Valid {
-			v := uint64(competitionID.Int64)
-			ev.CompetitionID = &v
-		}
-
-		if venueID.Valid {
-			v := uint64(venueID.Int64)
-			ev.VenueID = &v
-		}
-
-		if homeScore.Valid {
-			v := int(homeScore.Int64)
-			ev.HomeScore = &v
-		}
-
-		if awayScore.Valid {
-			v := int(awayScore.Int64)
-			ev.AwayScore = &v
-		}
-
-		if description.Valid {
-			v := description.String
-			ev.Description = &v
-		}
-
-		events = append(events, ev)
+		events = append(events, *ev)
 	}
-
 	if err := rows.Err(); err != nil {
-		return events, fmt.Errorf("error while iterating event rows: %w", err)
+		return nil, fmt.Errorf("error while iterating event rows: %w", err)
 	}
 
 	return events, nil

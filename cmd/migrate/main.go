@@ -175,12 +175,12 @@ func seedDatabase(db *sql.DB, seedsPath, seedName string) error {
 }
 
 func main() {
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		log.Fatal("DATABASE_URL environment variable not set")
+	connectionString := os.Getenv("DB_CONNECTION_STRING")
+	if connectionString == "" {
+		log.Fatal("DB_CONNECTION_STRING environment variable not set")
 	}
 
-	db, err := sql.Open(dbDriverName, dbURL)
+	db, err := sql.Open(dbDriverName, connectionString)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}

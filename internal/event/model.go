@@ -1,6 +1,9 @@
 package event
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type Status string
 
@@ -25,4 +28,12 @@ type Event struct {
 	IsNeutralVenue bool      `json:"is_neutral_venue"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type eventNullableFields struct {
+	CompetitionID sql.NullInt64
+	VenueID       sql.NullInt64
+	HomeScore     sql.NullInt64
+	AwayScore     sql.NullInt64
+	Description   sql.NullString
 }
