@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +10,16 @@ import (
 	"github.com/eryk-poradecki/sports-event-calendar/internal/database"
 	"github.com/eryk-poradecki/sports-event-calendar/internal/event"
 )
+
+var indexTemplate = template.Must(template.ParseFiles("/web/templates/index.html"))
+
+func renderIndex(w http.ResponseWriter, r *http.Request) {
+	if err := indexTemplate.Execute(w, nil); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+}
 
 func main() {
 	port := os.Getenv("BACKEND_PORT")
@@ -28,13 +39,19 @@ func main() {
 
 	router := http.NewServeMux()
 
-	router.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+	apiV1 := http.NewServeMux()
+	apiV1.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "healthy")
 	})
+	apiV1.HandleFunc("GET /events/{id}", event.HandleGetEventByID(db))
+	apiV1.HandleFunc("GET /events", event.HandleGetAllEvents(db))
+	apiV1.HandleFunc("POST /events", event.HandleCreateEvent(db))
 
-	router.HandleFunc("GET /events/{id}", event.HandleGetEventByID(db))
-	router.HandleFunc("GET /events", event.HandleGetAllEvents(db))
-	router.HandleFunc("POST /events", event.HandleCreateEvent(db))
+	router.Handle("/api/v1", http.StripPrefix("/api/v1", apiV1))
+
+	staticFiles := http.FileServer(http.Dir("web/static"))
+	router.Handle("GET /static/", http.StripPrefix("/static/", staticFiles))
+	router.HandleFunc("GET /", renderIndex)
 
 	log.Printf("starting server on :%s", port)
 	err = http.ListenAndServe(fmt.Sprintf(":%s", port), router)

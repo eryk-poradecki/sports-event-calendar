@@ -10,17 +10,17 @@ type rowScanner interface {
 	Scan(dest ...any) error
 }
 
-func scanEvent(scanner rowScanner) (*Event, error) {
-	var ev Event
+func scanEvent(scanner rowScanner) (*EventDetails, error) {
+	var ev EventDetails
 	var evNullable eventNullableFields
 
 	err := scanner.Scan(
 		&ev.ID,
-		&ev.SportID,
-		&evNullable.CompetitionID,
-		&evNullable.VenueID,
-		&ev.HomeTeamID,
-		&ev.AwayTeamID,
+		&ev.SportName,
+		&evNullable.CompetitionName,
+		&evNullable.VenueName,
+		&ev.HomeTeamName,
+		&ev.AwayTeamName,
 		&ev.StartTime,
 		&ev.Status,
 		&evNullable.HomeScore,
@@ -38,14 +38,14 @@ func scanEvent(scanner rowScanner) (*Event, error) {
 		return nil, fmt.Errorf("could not get event: %w", err)
 	}
 
-	if evNullable.CompetitionID.Valid {
-		v := uint64(evNullable.CompetitionID.Int64)
-		ev.CompetitionID = &v
+	if evNullable.CompetitionName.Valid {
+		v := string(evNullable.CompetitionName.String)
+		ev.CompetitionName = v
 	}
 
-	if evNullable.VenueID.Valid {
-		v := uint64(evNullable.VenueID.Int64)
-		ev.VenueID = &v
+	if evNullable.VenueName.Valid {
+		v := string(evNullable.VenueName.String)
+		ev.VenueName = v
 	}
 
 	if evNullable.HomeScore.Valid {
@@ -66,52 +66,62 @@ func scanEvent(scanner rowScanner) (*Event, error) {
 	return &ev, nil
 }
 
-func GetByID(db *sql.DB, id uint64) (*Event, error) {
+func GetByID(db *sql.DB, id uint64) (*EventDetails, error) {
 	const query = `
 		SELECT
-			id,
-			_sport_id,
-			_competition_id,
-			_venue_id,
-			_home_team_id,
-			_away_team_id,
-			start_time,
-			status,
-			home_score,
-			away_score,
-			description,
-			is_neutral_venue,
-			created_at,
-			updated_at
+			events.id,
+			sports.name,
+			competitions.name,
+			venues.name,
+			home_teams.name,
+			away_teams.name,
+			events.start_time,
+			events.status,
+			events.home_score,
+			events.away_score,
+			events.description,
+			events.is_neutral_venue,
+			events.created_at,
+			events.updated_at
 		FROM events
-		WHERE id = $1;
+		JOIN sports ON sports.id = events._sport_id
+		LEFT JOIN competitions ON competitions.id = events._competition_id
+		LEFT JOIN venues ON venues.id = events._venue_id
+		JOIN teams home_teams ON home_teams.id = events._home_team_id
+		JOIN teams away_teams ON away_teams.id = events._away_team_id
+		WHERE events.id = $1;
 	`
 
 	scanner := db.QueryRow(query, id)
 	return scanEvent(scanner)
 }
 
-func GetAll(db *sql.DB) ([]Event, error) {
-	events := make([]Event, 0)
+func GetAll(db *sql.DB) ([]EventDetails, error) {
+	events := make([]EventDetails, 0)
 
 	const query = `
 		SELECT
-			id,
-			_sport_id,
-			_competition_id,
-			_venue_id,
-			_home_team_id,
-			_away_team_id,
-			start_time,
-			status,
-			home_score,
-			away_score,
-			description,
-			is_neutral_venue,
-			created_at,
-			updated_at
+			events.id,
+			sports.name,
+			competitions.name,
+			venues.name,
+			home_teams.name,
+			away_teams.name,
+			events.start_time,
+			events.status,
+			events.home_score,
+			events.away_score,
+			events.description,
+			events.is_neutral_venue,
+			events.created_at,
+			events.updated_at
 		FROM events
-		ORDER BY start_time ASC;
+		JOIN sports ON sports.id = events._sport_id
+		LEFT JOIN competitions ON competitions.id = events._competition_id
+		LEFT JOIN venues ON venues.id = events._venue_id
+		JOIN teams home_teams ON home_teams.id = events._home_team_id
+		JOIN teams away_teams ON away_teams.id = events._away_team_id
+		ORDER BY events.start_time ASC;
 	`
 
 	rows, err := db.Query(query)
@@ -151,7 +161,7 @@ func Create(db *sql.DB, ev *Event) error {
 			is_neutral_venue
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		RETURNING id;
+		RETURNING id, created_at, updated_at;
 	`
 
 	err := db.QueryRow(
@@ -167,7 +177,7 @@ func Create(db *sql.DB, ev *Event) error {
 		ev.AwayScore,
 		ev.Description,
 		ev.IsNeutralVenue,
-	).Scan(&ev.ID)
+	).Scan(&ev.ID, &ev.CreatedAt, &ev.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("could not create event: %w", err)
 	}

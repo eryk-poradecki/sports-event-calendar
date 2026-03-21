@@ -18,6 +18,7 @@ COPY --from=builder /main /main
 COPY --from=builder /migrate /migrate
 COPY --from=builder /app/migrations /migrations
 COPY --from=builder /app/seeds /seeds
+COPY --from=builder /app/web /web
 
 EXPOSE 8080
 CMD ["/main"]

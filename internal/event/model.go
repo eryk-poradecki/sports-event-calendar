@@ -30,10 +30,27 @@ type Event struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
+type EventDetails struct {
+	ID              uint64    `json:"id"`
+	SportName       string    `json:"sport_name"`
+	CompetitionName string    `json:"competition_name"`
+	VenueName       string    `json:"venue_name"`
+	HomeTeamName    string    `json:"home_team_name"`
+	AwayTeamName    string    `json:"away_team_name"`
+	StartTime       time.Time `json:"start_time"`
+	Status          Status    `json:"status"`
+	HomeScore       *int      `json:"home_score"`
+	AwayScore       *int      `json:"away_score"`
+	Description     *string   `json:"description"`
+	IsNeutralVenue  bool      `json:"is_neutral_venue"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
 type eventNullableFields struct {
-	CompetitionID sql.NullInt64
-	VenueID       sql.NullInt64
-	HomeScore     sql.NullInt64
-	AwayScore     sql.NullInt64
-	Description   sql.NullString
+	CompetitionName sql.NullString
+	VenueName       sql.NullString
+	HomeScore       sql.NullInt64
+	AwayScore       sql.NullInt64
+	Description     sql.NullString
 }
