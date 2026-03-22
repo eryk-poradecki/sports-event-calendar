@@ -98,6 +98,11 @@ func HandleCreateEvent(db *sql.DB) http.HandlerFunc {
 		}
 
 		if err := CreateEvent(db, &ev); err != nil {
+			if errors.Is(err, ErrInvalidEvent) {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				log.Printf("create event failed: %v", err)
+				return
+			}
 			http.Error(w, "failed to create event", http.StatusBadRequest)
 			log.Printf("create event failed: %v", err)
 			return

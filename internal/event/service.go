@@ -6,33 +6,62 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/eryk-poradecki/sports-event-calendar/internal/competition"
 	"github.com/eryk-poradecki/sports-event-calendar/internal/sport"
+	"github.com/eryk-poradecki/sports-event-calendar/internal/team"
 )
 
 func CreateEvent(db *sql.DB, event *Event) error {
-	if event.HomeTeamID == event.AwayTeamID {
-		return fmt.Errorf("home and away teams must be different")
-	}
 	if event.StartTime.IsZero() {
 		return fmt.Errorf("start_time is required")
 	}
 	if event.IsNeutralVenue && event.VenueID == nil {
-		return fmt.Errorf("neutral venue events must have a venue")
+		return fmt.Errorf("%w: neutral venue events must have a venue", ErrInvalidEvent)
 	}
 	if event.HomeScore != nil && *event.HomeScore < 0 {
-		return fmt.Errorf("home_score cannot be negative")
+		return fmt.Errorf("%w: home_score cannot be negative", ErrInvalidEvent)
 	}
 	if event.AwayScore != nil && *event.AwayScore < 0 {
-		return fmt.Errorf("away_score cannot be negative")
+		return fmt.Errorf("%w: away_score cannot be negative", ErrInvalidEvent)
 	}
 	if event.Status == Scheduled {
 		if event.HomeScore != nil || event.AwayScore != nil {
-			return fmt.Errorf("scheduled events cannot have scores")
+			return fmt.Errorf("%w: scheduled events cannot have scores", ErrInvalidEvent)
 		}
 	}
 	if event.Status == Cancelled {
 		if event.HomeScore != nil || event.AwayScore != nil {
-			return fmt.Errorf("cancelled events cannot have scores")
+			return fmt.Errorf("%w: cancelled events cannot have scores", ErrInvalidEvent)
+		}
+	}
+
+	homeTeam, err := team.GetByID(db, event.HomeTeamID)
+	if err != nil {
+		return fmt.Errorf("%w: home team not found", ErrInvalidEvent)
+	}
+	awayTeam, err := team.GetByID(db, event.AwayTeamID)
+	if err != nil {
+		return fmt.Errorf("%w: away team not found", ErrInvalidEvent)
+	}
+	if homeTeam.ID == awayTeam.ID {
+		return fmt.Errorf("%w: home and away teams must be different", ErrInvalidEvent)
+	}
+
+	if homeTeam.SportID != awayTeam.SportID {
+		return fmt.Errorf("%w: home and away teams must belong to the same sport", ErrInvalidEvent)
+	}
+
+	if homeTeam.SportID != event.SportID || awayTeam.SportID != event.SportID {
+		return fmt.Errorf("%w: event sport must match both teams' sport", ErrInvalidEvent)
+	}
+
+	if event.CompetitionID != nil {
+		eventCompetition, err := competition.GetByID(db, *event.CompetitionID)
+		if err != nil {
+			return fmt.Errorf("%w: competition not found", ErrInvalidEvent)
+		}
+		if eventCompetition.SportID != event.SportID {
+			return fmt.Errorf("%w: competition sport must match event sport", ErrInvalidEvent)
 		}
 	}
 

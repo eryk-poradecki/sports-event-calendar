@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/eryk-poradecki/sports-event-calendar/internal/competition"
 	"github.com/eryk-poradecki/sports-event-calendar/internal/database"
 	"github.com/eryk-poradecki/sports-event-calendar/internal/event"
 	"github.com/eryk-poradecki/sports-event-calendar/internal/sport"
+	"github.com/eryk-poradecki/sports-event-calendar/internal/team"
 )
 
 var indexTemplate = template.Must(template.ParseFiles("/web/templates/index.html"))
@@ -47,7 +49,10 @@ func main() {
 	apiV1.HandleFunc("GET /events/{id}", event.HandleGetEventByID(db))
 	apiV1.HandleFunc("GET /events", event.HandleGetAllEvents(db))
 	apiV1.HandleFunc("POST /events", event.HandleCreateEvent(db))
+
 	apiV1.HandleFunc("GET /sports", sport.HandleGetAllSports(db))
+	apiV1.HandleFunc("GET /teams", team.HandleGetAllTeams(db))
+	apiV1.HandleFunc("GET /competitions", competition.HandleGetAllCompetitions(db))
 
 	router.Handle("/api/v1/", http.StripPrefix("/api/v1", apiV1))
 

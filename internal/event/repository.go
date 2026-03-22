@@ -39,28 +39,25 @@ func scanEvent(scanner rowScanner) (*EventDetails, error) {
 	}
 
 	if evNullable.CompetitionName.Valid {
-		v := string(evNullable.CompetitionName.String)
+		v := evNullable.CompetitionName.String
 		ev.CompetitionName = v
 	}
 
 	if evNullable.VenueName.Valid {
-		v := string(evNullable.VenueName.String)
+		v := evNullable.VenueName.String
 		ev.VenueName = v
 	}
 
 	if evNullable.HomeScore.Valid {
-		v := int(evNullable.HomeScore.Int64)
-		ev.HomeScore = &v
+		ev.HomeScore = new(int(evNullable.HomeScore.Int64))
 	}
 
 	if evNullable.AwayScore.Valid {
-		v := int(evNullable.AwayScore.Int64)
-		ev.AwayScore = &v
+		ev.AwayScore = new(int(evNullable.AwayScore.Int64))
 	}
 
 	if evNullable.Description.Valid {
-		v := evNullable.Description.String
-		ev.Description = &v
+		ev.Description = new(evNullable.Description.String)
 	}
 
 	return &ev, nil
