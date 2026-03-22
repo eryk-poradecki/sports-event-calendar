@@ -41,7 +41,25 @@ func HandleGetEventByID(db *sql.DB) http.HandlerFunc {
 
 func HandleGetAllEvents(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		events, err := GetAll(db)
+		pageStr := r.URL.Query().Get("page")
+		pageSizeStr := r.URL.Query().Get("page_size")
+		if pageStr == "" {
+			pageStr = "0"
+		}
+		pageInt, err := strconv.Atoi(pageStr)
+		if err != nil {
+			http.Error(w, "invalid page", http.StatusBadRequest)
+			return
+		}
+		if pageSizeStr == "" {
+			pageSizeStr = "0"
+		}
+		pageSizeInt, err := strconv.Atoi(pageSizeStr)
+		if err != nil {
+			http.Error(w, "invalid page size", http.StatusBadRequest)
+			return
+		}
+		events, err := GetAllEvents(db, pageInt, pageSizeInt)
 		if err != nil {
 			http.Error(w, "failed to fetch events", http.StatusInternalServerError)
 			log.Printf("get events failed: %v", err)

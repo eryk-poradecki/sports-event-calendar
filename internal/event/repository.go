@@ -96,7 +96,7 @@ func GetByID(db *sql.DB, id uint64) (*EventDetails, error) {
 	return scanEvent(scanner)
 }
 
-func GetAll(db *sql.DB) ([]EventDetails, error) {
+func GetAll(db *sql.DB, page, pageSize int) ([]EventDetails, int, error) {
 	events := make([]EventDetails, 0)
 
 	const query = `
@@ -121,28 +121,37 @@ func GetAll(db *sql.DB) ([]EventDetails, error) {
 		LEFT JOIN venues ON venues.id = events._venue_id
 		JOIN teams home_teams ON home_teams.id = events._home_team_id
 		JOIN teams away_teams ON away_teams.id = events._away_team_id
-		ORDER BY events.start_time ASC;
+		ORDER BY events.start_time ASC
+		LIMIT $1 OFFSET $2;
 	`
 
-	rows, err := db.Query(query)
+	const queryTotal = `
+		SELECT
+			COUNT(*)
+		FROM events
+	`
+
+	rows, err := db.Query(query, pageSize, (page-1)*pageSize)
 	if err != nil {
-		return nil, fmt.Errorf("could not get events: %w", err)
+		return nil, 0, fmt.Errorf("could not get events: %w", err)
 	}
 	defer rows.Close()
+	var total int
+	db.QueryRow(queryTotal).Scan(&total)
 
 	for rows.Next() {
 		ev, err := scanEvent(rows)
 		if err != nil {
-			return nil, fmt.Errorf("could not get events: %w", err)
+			return nil, 0, fmt.Errorf("could not get events: %w", err)
 		}
 
 		events = append(events, *ev)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error while iterating event rows: %w", err)
+		return nil, 0, fmt.Errorf("error while iterating event rows: %w", err)
 	}
 
-	return events, nil
+	return events, total, nil
 }
 
 func Create(db *sql.DB, ev *Event) error {

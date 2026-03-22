@@ -47,12 +47,12 @@ func main() {
 	apiV1.HandleFunc("GET /events", event.HandleGetAllEvents(db))
 	apiV1.HandleFunc("POST /events", event.HandleCreateEvent(db))
 
-	router.Handle("/api/v1", http.StripPrefix("/api/v1", apiV1))
+	router.Handle("/api/v1/", http.StripPrefix("/api/v1", apiV1))
 
 	staticFiles := http.FileServer(http.Dir("web/static"))
 	router.Handle("GET /static/", http.StripPrefix("/static/", staticFiles))
-	router.HandleFunc("GET /", renderIndex)
-
+	router.HandleFunc("GET /{$}", renderIndex)
+	
 	log.Printf("starting server on :%s", port)
 	err = http.ListenAndServe(fmt.Sprintf(":%s", port), router)
 	if err != nil {

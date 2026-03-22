@@ -16,9 +16,12 @@
  * @property {string} updated_at
  */
 
+let currentPage = 1;
+const pageSize = 10;
+
 /** @returns {Promise<EventDetails[]>} */
-async function loadEvents() {
-    const response = await fetch("/api/v1/events");
+async function loadEvents(page = 1) {
+    const response = await fetch(`/api/v1/events?page=${page}&pageSize=${pageSize}`);
 
     if (!response.ok) {
         throw new Error("failed to fetch events");
@@ -130,18 +133,47 @@ function renderEvents(events) {
     }
 }
 
+function renderPagination(page, totalPages) {
+    const pagination = document.getElementById("pagination");
+    pagination.innerHTML = "";
+
+    if (totalPages <= 1) {
+        return;
+    }
+
+    const prevButton = document.createElement("button");
+    prevButton.textContent = "Previous";
+    prevButton.disabled = page <= 1;
+    prevButton.addEventListener("click", (event) => {refreshEvents(page - 1)});
+
+    const info = document.createElement("span");
+    info.textContent = `Page ${page} of ${totalPages}`;
+
+    const nextButton = document.createElement("button");
+    nextButton.textContent = "Next";
+    nextButton.disabled = page >= totalPages;
+    nextButton.addEventListener("click", (event) => {refreshEvents(page + 1)});
+
+    pagination.appendChild(prevButton);
+    pagination.appendChild(info);
+    pagination.appendChild(nextButton);
+}
+
 function showError(message) {
     const eventsList = document.getElementById("events-list");
     eventsList.innerHTML = `<p>${message}</p>`;
 }
 
-async function init() {
+async function refreshEvents(page = 1) {
     try {
-        const events = await loadEvents();
-        renderEvents(events);
+        const data = await loadEvents(page);
+        currentPage = data.page;
+
+        renderEvents(data.items);
+        renderPagination(data.page, data.total_pages)
     } catch (error) {
         showError(error.message);
     }
 }
 
-window.addEventListener('DOMContentLoaded', init);
+window.addEventListener('DOMContentLoaded', () => refreshEvents(1));

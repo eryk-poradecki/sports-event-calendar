@@ -34,3 +34,34 @@ func CreateEvent(db *sql.DB, event *Event) error {
 
 	return Create(db, event)
 }
+
+func GetAllEvents(db *sql.DB, page, pageSize int) (PaginatedEventsResponse, error) {
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	if pageSize > 50 {
+		pageSize = 50
+	}
+
+	if page < 1 {
+		page = 1
+	}
+
+	var response PaginatedEventsResponse
+
+	items, total, err := GetAll(db, page, pageSize)
+	if err != nil {
+		return response, err
+	}
+
+	totalPages := (total + pageSize - 1) / pageSize
+
+	response.Items = items
+	response.Page = page
+	response.PageSize = pageSize
+	response.Total = total
+	response.TotalPages = totalPages
+
+	return response, nil
+}

@@ -54,3 +54,11 @@ type eventNullableFields struct {
 	AwayScore       sql.NullInt64
 	Description     sql.NullString
 }
+
+type PaginatedEventsResponse struct {
+	Items      []EventDetails `json:"items"`
+	Page       int            `json:"page"`
+	PageSize   int            `json:"page_size"`
+	Total      int            `json:"total"`
+	TotalPages int            `json:"total_pages"`
+}
