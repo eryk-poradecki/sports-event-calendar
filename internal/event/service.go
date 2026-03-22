@@ -2,7 +2,11 @@ package event
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"time"
+
+	"github.com/eryk-poradecki/sports-event-calendar/internal/sport"
 )
 
 func CreateEvent(db *sql.DB, event *Event) error {
@@ -35,7 +39,7 @@ func CreateEvent(db *sql.DB, event *Event) error {
 	return Create(db, event)
 }
 
-func GetAllEvents(db *sql.DB, page, pageSize int) (PaginatedEventsResponse, error) {
+func GetAllEvents(db *sql.DB, page, pageSize int, sportSlug, dateFrom, dateTo string) (PaginatedEventsResponse, error) {
 	if pageSize <= 0 {
 		pageSize = 10
 	}
@@ -48,9 +52,40 @@ func GetAllEvents(db *sql.DB, page, pageSize int) (PaginatedEventsResponse, erro
 		page = 1
 	}
 
+	var sportID *uint64
+
+	if sportSlug != "" {
+		sportBySlug, err := sport.GetBySlug(db, sportSlug)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return PaginatedEventsResponse{}, ErrSportNotFound
+			}
+			return PaginatedEventsResponse{}, err
+		}
+		sportID = &sportBySlug.ID
+	}
+
+	dateFromTime, err := parseDateParam("from", dateFrom)
+	if err != nil {
+		return PaginatedEventsResponse{}, err
+	}
+
+	dateToTime, err := parseDateParam("to", dateTo)
+	if err != nil {
+		return PaginatedEventsResponse{}, err
+	}
+
+	if dateFromTime != nil && dateToTime != nil && dateFromTime.After(*dateToTime) {
+		return PaginatedEventsResponse{}, fmt.Errorf("%w: 'from' date cannot be after 'to' date", ErrInvalidDate)
+	}
+
+	if dateToTime != nil {
+		dateToTime = new(dateToTime.AddDate(0, 0, 1))
+	}
+
 	var response PaginatedEventsResponse
 
-	items, total, err := GetAll(db, page, pageSize)
+	items, total, err := GetAll(db, page, pageSize, sportID, dateFromTime, dateToTime)
 	if err != nil {
 		return response, err
 	}
@@ -64,4 +99,18 @@ func GetAllEvents(db *sql.DB, page, pageSize int) (PaginatedEventsResponse, erro
 	response.TotalPages = totalPages
 
 	return response, nil
+}
+
+func parseDateParam(field, value string) (*time.Time, error) {
+	if value == "" {
+		return nil, nil
+	}
+	t, err := time.Parse("2006-01-02", value)
+	if err != nil {
+		if _, ok := errors.AsType[*time.ParseError](err); ok {
+			return nil, fmt.Errorf("%w: %q value %q, expected YYYY-MM-DD", ErrInvalidDate, field, value)
+		}
+		return nil, err
+	}
+	return &t, nil
 }

@@ -43,8 +43,11 @@ func HandleGetAllEvents(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		pageStr := r.URL.Query().Get("page")
 		pageSizeStr := r.URL.Query().Get("page_size")
+		sport := r.URL.Query().Get("sport")
+		dateFrom := r.URL.Query().Get("date_from")
+		dateTo := r.URL.Query().Get("date_to")
 		if pageStr == "" {
-			pageStr = "0"
+			pageStr = "1"
 		}
 		pageInt, err := strconv.Atoi(pageStr)
 		if err != nil {
@@ -52,15 +55,23 @@ func HandleGetAllEvents(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		if pageSizeStr == "" {
-			pageSizeStr = "0"
+			pageSizeStr = "10"
 		}
 		pageSizeInt, err := strconv.Atoi(pageSizeStr)
 		if err != nil {
 			http.Error(w, "invalid page size", http.StatusBadRequest)
 			return
 		}
-		events, err := GetAllEvents(db, pageInt, pageSizeInt)
+		events, err := GetAllEvents(db, pageInt, pageSizeInt, sport, dateFrom, dateTo)
 		if err != nil {
+			if errors.Is(err, ErrSportNotFound) {
+				http.Error(w, "sport not found", http.StatusNotFound)
+				return
+			}
+			if errors.Is(err, ErrInvalidDate) {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 			http.Error(w, "failed to fetch events", http.StatusInternalServerError)
 			log.Printf("get events failed: %v", err)
 			return

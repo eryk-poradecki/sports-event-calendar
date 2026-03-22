@@ -43,8 +43,6 @@ type EventDetails struct {
 	AwayScore       *int      `json:"away_score"`
 	Description     *string   `json:"description"`
 	IsNeutralVenue  bool      `json:"is_neutral_venue"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 type eventNullableFields struct {

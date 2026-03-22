@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 )
 
 type rowScanner interface {
@@ -27,8 +29,6 @@ func scanEvent(scanner rowScanner) (*EventDetails, error) {
 		&evNullable.AwayScore,
 		&evNullable.Description,
 		&ev.IsNeutralVenue,
-		&ev.CreatedAt,
-		&ev.UpdatedAt,
 	)
 
 	if err != nil {
@@ -80,9 +80,7 @@ func GetByID(db *sql.DB, id uint64) (*EventDetails, error) {
 			events.home_score,
 			events.away_score,
 			events.description,
-			events.is_neutral_venue,
-			events.created_at,
-			events.updated_at
+			events.is_neutral_venue
 		FROM events
 		JOIN sports ON sports.id = events._sport_id
 		LEFT JOIN competitions ON competitions.id = events._competition_id
@@ -96,10 +94,10 @@ func GetByID(db *sql.DB, id uint64) (*EventDetails, error) {
 	return scanEvent(scanner)
 }
 
-func GetAll(db *sql.DB, page, pageSize int) ([]EventDetails, int, error) {
+func GetAll(db *sql.DB, page, pageSize int, sportID *uint64, dateFrom, dateTo *time.Time) ([]EventDetails, int, error) {
 	events := make([]EventDetails, 0)
 
-	const query = `
+	baseQuery := `
 		SELECT
 			events.id,
 			sports.name,
@@ -112,32 +110,81 @@ func GetAll(db *sql.DB, page, pageSize int) ([]EventDetails, int, error) {
 			events.home_score,
 			events.away_score,
 			events.description,
-			events.is_neutral_venue,
-			events.created_at,
-			events.updated_at
+			events.is_neutral_venue
 		FROM events
 		JOIN sports ON sports.id = events._sport_id
 		LEFT JOIN competitions ON competitions.id = events._competition_id
 		LEFT JOIN venues ON venues.id = events._venue_id
 		JOIN teams home_teams ON home_teams.id = events._home_team_id
 		JOIN teams away_teams ON away_teams.id = events._away_team_id
-		ORDER BY events.start_time ASC
-		LIMIT $1 OFFSET $2;
 	`
 
-	const queryTotal = `
-		SELECT
-			COUNT(*)
+	var conditions []string
+	var args []any
+	argN := 1
+
+	// Keep separate filter args for the paginated data query and the count query.
+	// Currently, the filters are almost identical, but the queries can diverge over time
+	// (for example because of different joins or an FK becoming nullable), so separate condition/arg slices are safer.
+	var countConditions []string
+	var countArgs []any
+	countArgN := 1
+
+	if sportID != nil {
+		conditions = append(conditions, fmt.Sprintf("events._sport_id = $%d", argN))
+		args = append(args, *sportID)
+		argN++
+		countConditions = append(countConditions, fmt.Sprintf("events._sport_id = $%d", countArgN))
+		countArgs = append(countArgs, *sportID)
+		countArgN++
+	}
+	if dateFrom != nil {
+		conditions = append(conditions, fmt.Sprintf("events.start_time >= $%d", argN))
+		args = append(args, *dateFrom)
+		argN++
+		countConditions = append(countConditions, fmt.Sprintf("events.start_time >= $%d", countArgN))
+		countArgs = append(countArgs, *dateFrom)
+		countArgN++
+	}
+	if dateTo != nil {
+		conditions = append(conditions, fmt.Sprintf("events.start_time < $%d", argN))
+		args = append(args, *dateTo)
+		argN++
+		countConditions = append(countConditions, fmt.Sprintf("events.start_time < $%d", countArgN))
+		countArgs = append(countArgs, *dateTo)
+		countArgN++
+	}
+
+	if len(conditions) > 0 {
+		baseQuery += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	baseQuery += fmt.Sprintf(" ORDER BY events.start_time ASC LIMIT $%d OFFSET $%d", argN, argN+1)
+	args = append(args, pageSize, (page-1)*pageSize)
+
+	countQuery := `
+		SELECT COUNT(*)
 		FROM events
+		JOIN sports ON sports.id = events._sport_id
+		JOIN teams home_teams ON home_teams.id = events._home_team_id
+		JOIN teams away_teams ON away_teams.id = events._away_team_id
 	`
 
-	rows, err := db.Query(query, pageSize, (page-1)*pageSize)
+	if len(countConditions) > 0 {
+		countQuery += " WHERE " + strings.Join(countConditions, " AND ")
+	}
+
+	rows, err := db.Query(baseQuery, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("could not get events: %w", err)
 	}
 	defer rows.Close()
+
 	var total int
-	db.QueryRow(queryTotal).Scan(&total)
+	err = db.QueryRow(countQuery, countArgs[:len(countArgs)]...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	for rows.Next() {
 		ev, err := scanEvent(rows)
