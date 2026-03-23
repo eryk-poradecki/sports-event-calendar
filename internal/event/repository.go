@@ -12,23 +12,20 @@ type rowScanner interface {
 	Scan(dest ...any) error
 }
 
-func scanEvent(scanner rowScanner) (*EventDetails, error) {
-	var ev EventDetails
-	var evNullable eventNullableFields
+func scanEventListItem(scanner rowScanner) (*EventListItem, error) {
+	var ev EventListItem
+	var competitionName sql.NullString
+	var venueName sql.NullString
 
 	err := scanner.Scan(
 		&ev.ID,
 		&ev.SportName,
-		&evNullable.CompetitionName,
-		&evNullable.VenueName,
+		&competitionName,
+		&venueName,
 		&ev.HomeTeamName,
 		&ev.AwayTeamName,
 		&ev.StartTime,
 		&ev.Status,
-		&evNullable.HomeScore,
-		&evNullable.AwayScore,
-		&evNullable.Description,
-		&ev.IsNeutralVenue,
 	)
 
 	if err != nil {
@@ -38,26 +35,75 @@ func scanEvent(scanner rowScanner) (*EventDetails, error) {
 		return nil, fmt.Errorf("could not get event: %w", err)
 	}
 
+	if competitionName.Valid {
+		v := competitionName.String
+		ev.CompetitionName = v
+	}
+
+	if venueName.Valid {
+		v := venueName.String
+		ev.VenueName = v
+	}
+
+	return &ev, nil
+}
+
+func scanEventDetails(scanner rowScanner) (*EventDetails, error) {
+	var ev EventDetails
+	var evNullable eventDetailsNullableFields
+
+	err := scanner.Scan(
+		&ev.ID,
+		&ev.SportName,
+		&evNullable.CompetitionName,
+		&evNullable.VenueName,
+		&ev.HomeTeamName,
+		&ev.AwayTeamName,
+		&ev.HomeTeamCountryName,
+		&ev.AwayTeamCountryName,
+		&ev.StartTime,
+		&ev.Status,
+		&evNullable.HomeScore,
+		&evNullable.AwayScore,
+		&evNullable.Description,
+		&ev.IsNeutralVenue,
+		&evNullable.HomeTeamURL,
+		&evNullable.AwayTeamURL,
+		&evNullable.VenueURL,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("could not get event details: %w", err)
+	}
+
 	if evNullable.CompetitionName.Valid {
 		v := evNullable.CompetitionName.String
 		ev.CompetitionName = v
 	}
-
 	if evNullable.VenueName.Valid {
 		v := evNullable.VenueName.String
 		ev.VenueName = v
 	}
-
 	if evNullable.HomeScore.Valid {
 		ev.HomeScore = new(int(evNullable.HomeScore.Int64))
 	}
-
 	if evNullable.AwayScore.Valid {
 		ev.AwayScore = new(int(evNullable.AwayScore.Int64))
 	}
-
 	if evNullable.Description.Valid {
 		ev.Description = new(evNullable.Description.String)
+	}
+	if evNullable.HomeTeamURL.Valid {
+		ev.HomeTeamURL = new(evNullable.HomeTeamURL.String)
+	}
+	if evNullable.AwayTeamURL.Valid {
+		ev.AwayTeamURL = new(evNullable.AwayTeamURL.String)
+	}
+	if evNullable.VenueURL.Valid {
+		ev.VenueURL = new(evNullable.VenueURL.String)
 	}
 
 	return &ev, nil
@@ -72,27 +118,34 @@ func GetByID(db *sql.DB, id uint64) (*EventDetails, error) {
 			venues.name,
 			home_teams.name,
 			away_teams.name,
+			home_countries.name,
+			away_countries.name,
 			events.start_time,
 			events.status,
 			events.home_score,
 			events.away_score,
 			events.description,
-			events.is_neutral_venue
+			events.is_neutral_venue,
+			home_teams.website_url,
+			away_teams.website_url,
+			venues.website_url
 		FROM events
 		JOIN sports ON sports.id = events._sport_id
 		LEFT JOIN competitions ON competitions.id = events._competition_id
 		LEFT JOIN venues ON venues.id = events._venue_id
 		JOIN teams home_teams ON home_teams.id = events._home_team_id
 		JOIN teams away_teams ON away_teams.id = events._away_team_id
+		JOIN countries home_countries ON home_countries.id = home_teams._country_id
+		JOIN countries away_countries ON away_countries.id = away_teams._country_id
 		WHERE events.id = $1;
 	`
 
 	scanner := db.QueryRow(query, id)
-	return scanEvent(scanner)
+	return scanEventDetails(scanner)
 }
 
-func GetAll(db *sql.DB, page, pageSize int, sportID *uint64, dateFrom, dateTo *time.Time) ([]EventDetails, int, error) {
-	events := make([]EventDetails, 0)
+func GetAll(db *sql.DB, page, pageSize int, sportID *uint64, dateFrom, dateTo *time.Time) ([]EventListItem, int, error) {
+	events := make([]EventListItem, 0)
 
 	baseQuery := `
 		SELECT
@@ -103,11 +156,7 @@ func GetAll(db *sql.DB, page, pageSize int, sportID *uint64, dateFrom, dateTo *t
 			home_teams.name,
 			away_teams.name,
 			events.start_time,
-			events.status,
-			events.home_score,
-			events.away_score,
-			events.description,
-			events.is_neutral_venue
+			events.status
 		FROM events
 		JOIN sports ON sports.id = events._sport_id
 		LEFT JOIN competitions ON competitions.id = events._competition_id
@@ -178,13 +227,13 @@ func GetAll(db *sql.DB, page, pageSize int, sportID *uint64, dateFrom, dateTo *t
 	defer rows.Close()
 
 	var total int
-	err = db.QueryRow(countQuery, countArgs[:len(countArgs)]...).Scan(&total)
+	err = db.QueryRow(countQuery, countArgs...).Scan(&total)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("could not count events: %w", err)
 	}
 
 	for rows.Next() {
-		ev, err := scanEvent(rows)
+		ev, err := scanEventListItem(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("could not get events: %w", err)
 		}

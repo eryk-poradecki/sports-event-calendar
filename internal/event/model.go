@@ -30,7 +30,7 @@ type Event struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
-type EventDetails struct {
+type EventListItem struct {
 	ID              uint64    `json:"id"`
 	SportName       string    `json:"sport_name"`
 	CompetitionName string    `json:"competition_name"`
@@ -39,24 +39,43 @@ type EventDetails struct {
 	AwayTeamName    string    `json:"away_team_name"`
 	StartTime       time.Time `json:"start_time"`
 	Status          Status    `json:"status"`
-	HomeScore       *int      `json:"home_score"`
-	AwayScore       *int      `json:"away_score"`
-	Description     *string   `json:"description"`
-	IsNeutralVenue  bool      `json:"is_neutral_venue"`
 }
 
-type eventNullableFields struct {
+type EventDetails struct {
+	ID                  uint64    `json:"id"`
+	SportName           string    `json:"sport_name"`
+	CompetitionName     string    `json:"competition_name"`
+	VenueName           string    `json:"venue_name"`
+	HomeTeamName        string    `json:"home_team_name"`
+	AwayTeamName        string    `json:"away_team_name"`
+	HomeTeamCountryName string    `json:"home_team_country_name"`
+	AwayTeamCountryName string    `json:"away_team_country_name"`
+	StartTime           time.Time `json:"start_time"`
+	Status              Status    `json:"status"`
+	HomeScore           *int      `json:"home_score"`
+	AwayScore           *int      `json:"away_score"`
+	Description         *string   `json:"description"`
+	IsNeutralVenue      bool      `json:"is_neutral_venue"`
+	HomeTeamURL         *string   `json:"home_team_url"`
+	AwayTeamURL         *string   `json:"away_team_url"`
+	VenueURL            *string   `json:"venue_url"`
+}
+
+type eventDetailsNullableFields struct {
 	CompetitionName sql.NullString
 	VenueName       sql.NullString
 	HomeScore       sql.NullInt64
 	AwayScore       sql.NullInt64
 	Description     sql.NullString
+	HomeTeamURL     sql.NullString
+	AwayTeamURL     sql.NullString
+	VenueURL        sql.NullString
 }
 
 type PaginatedEventsResponse struct {
-	Items      []EventDetails `json:"items"`
-	Page       int            `json:"page"`
-	PageSize   int            `json:"page_size"`
-	Total      int            `json:"total"`
-	TotalPages int            `json:"total_pages"`
+	Items      []EventListItem `json:"items"`
+	Page       int             `json:"page"`
+	PageSize   int             `json:"page_size"`
+	Total      int             `json:"total"`
+	TotalPages int             `json:"total_pages"`
 }

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.HomeTeamName}} vs {{.AwayTeamName}} - Sports Event Calendar</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header>
+    <nav>
+        <div class="nav-brand">Sports Event Calendar</div>
+        <ul class="nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="/">Events</a></li>
+            <li><a href="#">Sports</a></li>
+            <li><a href="#">About</a></li>
+        </ul>
+    </nav>
+</header>
+
+<main class="page-container">
+    <section class="page-header">
+        <p class="details-breadcrumb">
+            <a href="/">Events</a>
+            <span>/</span>
+            <span>Event #{{.ID}}</span>
+        </p>
+        <h1>{{.HomeTeamName}} vs {{.AwayTeamName}}</h1>
+        <p>{{.CompetitionName}} • {{.SportName}}</p>
+    </section>
+
+    <section class="event-details-card">
+        <div class="event-details-top">
+            <div class="event-status-badge">
+                {{.Status}}
+            </div>
+
+            <div class="event-time-block">
+                <div class="details-label">Start time</div>
+                <div class="details-value details-time">
+                    {{.StartTime.Format "02 Jan 2006, 15:04"}}
+                </div>
+            </div>
+        </div>
+
+        <div class="matchup-section">
+            <div class="team-card">
+                <div class="team-card-header">
+                        <span class="team-side-label">
+                            {{if .IsNeutralVenue}}
+                                Team 1
+                            {{else}}
+                                Home team
+                            {{end}}
+                        </span>
+                </div>
+
+                <div class="team-name-row">
+                    <h2 class="team-name">{{.HomeTeamName}}</h2>
+                    {{if .HomeScore}}
+                    <div class="team-score">{{.HomeScore}}</div>
+                    {{end}}
+                </div>
+
+                <p class="team-country">{{.HomeTeamCountryName}}</p>
+
+                {{if .HomeTeamURL}}
+                <p class="details-link">
+                    <a href="{{.HomeTeamURL}}" target="_blank" rel="noopener noreferrer">
+                        Team page
+                    </a>
+                </p>
+                {{end}}
+            </div>
+
+            <div class="versus-block">VS</div>
+
+            <div class="team-card">
+                <div class="team-card-header">
+                        <span class="team-side-label">
+                            {{if .IsNeutralVenue}}
+                                Team 2
+                            {{else}}
+                                Away team
+                            {{end}}
+                        </span>
+                </div>
+
+                <div class="team-name-row">
+                    <h2 class="team-name">{{.AwayTeamName}}</h2>
+                    {{if .AwayScore}}
+                    <div class="team-score">{{.AwayScore}}</div>
+                    {{end}}
+                </div>
+
+                <p class="team-country">{{.AwayTeamCountryName}}</p>
+
+                {{if .AwayTeamURL}}
+                <p class="details-link">
+                    <a href="{{.AwayTeamURL}}" target="_blank" rel="noopener noreferrer">
+                        Team page
+                    </a>
+                </p>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="details-grid">
+            <div class="details-item">
+                <div class="details-label">Sport</div>
+                <div class="details-value">{{.SportName}}</div>
+            </div>
+
+            <div class="details-item">
+                <div class="details-label">Competition</div>
+                <div class="details-value">{{.CompetitionName}}</div>
+            </div>
+
+            <div class="details-item">
+                <div class="details-label">Venue</div>
+                <div class="details-value">
+                    {{.VenueName}}
+                    {{if .IsNeutralVenue}}
+                    <span class="neutral-badge">Neutral venue</span>
+                    {{end}}
+                </div>
+                {{if .VenueURL}}
+                <p class="details-link">
+                    <a href="{{.VenueURL}}" target="_blank" rel="noopener noreferrer">
+                        Venue page
+                    </a>
+                </p>
+                {{end}}
+            </div>
+
+            <div class="details-item">
+                <div class="details-label">Status</div>
+                <div class="details-value">{{.Status}}</div>
+            </div>
+        </div>
+
+        {{if .Description}}
+        <section class="description-section">
+            <h3>Description</h3>
+            <p>{{.Description}}</p>
+        </section>
+        {{end}}
+    </section>
+</main>
+</body>
+</html>

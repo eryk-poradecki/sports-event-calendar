@@ -1,11 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/eryk-poradecki/sports-event-calendar/internal/competition"
 	"github.com/eryk-poradecki/sports-event-calendar/internal/database"
@@ -15,12 +17,35 @@ import (
 )
 
 var indexTemplate = template.Must(template.ParseFiles("/web/templates/index.html"))
+var eventDetailsTemplate = template.Must(template.ParseFiles("/web/templates/event_details.html"))
 
 func renderIndex(w http.ResponseWriter, r *http.Request) {
 	if err := indexTemplate.Execute(w, nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Println(err)
 		return
+	}
+}
+
+func renderEventDetailsPage(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := r.PathValue("id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "error parsing id", http.StatusBadRequest)
+			return
+		}
+		eventDetails, err := event.GetByID(db, uint64(id))
+		if err != nil {
+			http.Error(w, "error getting event details", http.StatusNotFound)
+			return
+		}
+
+		if err := eventDetailsTemplate.Execute(w, eventDetails); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println(err)
+			return
+		}
 	}
 }
 
@@ -59,6 +84,7 @@ func main() {
 	staticFiles := http.FileServer(http.Dir("web/static"))
 	router.Handle("GET /static/", http.StripPrefix("/static/", staticFiles))
 	router.HandleFunc("GET /{$}", renderIndex)
+	router.HandleFunc("GET /events/{id}", renderEventDetailsPage(db))
 
 	log.Printf("starting server on :%s", port)
 	err = http.ListenAndServe(fmt.Sprintf(":%s", port), router)

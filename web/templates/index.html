@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sports Event Calendar</title>
     <link rel="stylesheet" href="/static/styles.css">
-    <script src="/static/app.js" defer></script>
+    <script src="/static/index.js" defer></script>
 </head>
 <body>
     <header>
@@ -24,7 +24,19 @@
         <section class="page-header">
             <h1>Upcoming Events</h1>
             <p>Browse scheduled sports matches by date.</p>
+            <p>Click on an event to view details.</p>
         </section>
+        <div id="filters">
+            <section id="sport-filter-section"></section>
+            <section id="date-filter-section">
+                <label for="date-from">Date from:</label>
+                <input type="date" id="date-from">
+                <label for="date-to">Date to:</label>
+                <input type="date" id="date-to">
+            </section>
+            <button type="button" onclick="clearFilters()">Clear filters</button>
+        </div>
+
 
         <section id="events-list" class="events-list">
             <p>Loading events...</p>
