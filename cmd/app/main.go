@@ -14,6 +14,7 @@ import (
 	"github.com/eryk-poradecki/sports-event-calendar/internal/event"
 	"github.com/eryk-poradecki/sports-event-calendar/internal/sport"
 	"github.com/eryk-poradecki/sports-event-calendar/internal/team"
+	"github.com/eryk-poradecki/sports-event-calendar/internal/venue"
 )
 
 var indexTemplate = template.Must(template.ParseFiles("/web/templates/index.html"))
@@ -78,6 +79,7 @@ func main() {
 	apiV1.HandleFunc("GET /sports", sport.HandleGetAllSports(db))
 	apiV1.HandleFunc("GET /teams", team.HandleGetAllTeams(db))
 	apiV1.HandleFunc("GET /competitions", competition.HandleGetAllCompetitions(db))
+	apiV1.HandleFunc("GET /venues", venue.HandleGetAllVenues(db))
 
 	router.Handle("/api/v1/", http.StripPrefix("/api/v1", apiV1))
 

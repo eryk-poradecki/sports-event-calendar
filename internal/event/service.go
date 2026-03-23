@@ -24,14 +24,25 @@ func CreateEvent(db *sql.DB, event *Event) error {
 	if event.AwayScore != nil && *event.AwayScore < 0 {
 		return fmt.Errorf("%w: away_score cannot be negative", ErrInvalidEvent)
 	}
+
+	now := time.Now().UTC()
+
 	if event.Status == Scheduled {
 		if event.HomeScore != nil || event.AwayScore != nil {
 			return fmt.Errorf("%w: scheduled events cannot have scores", ErrInvalidEvent)
+		}
+		if event.StartTime.Before(now) {
+			return fmt.Errorf("%w: cannot schedule an event in the past", ErrInvalidEvent)
 		}
 	}
 	if event.Status == Cancelled {
 		if event.HomeScore != nil || event.AwayScore != nil {
 			return fmt.Errorf("%w: cancelled events cannot have scores", ErrInvalidEvent)
+		}
+	}
+	if event.Status == Finished {
+		if event.StartTime.After(now) {
+			return fmt.Errorf("%w: cannot create a finished event in the future", ErrInvalidEvent)
 		}
 	}
 

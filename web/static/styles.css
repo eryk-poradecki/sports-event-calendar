@@ -516,3 +516,64 @@ nav {
 .filters-form select {
     margin: 0;
 }
+
+.create-event-section {
+    margin-bottom: 2rem;
+}
+
+#create-event-section > button,
+#toggle-event-form-btn,
+.event-form button {
+    padding: 0.6rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #1f2937;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#create-event-form {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+.form-row label {
+    font-weight: 600;
+    color: #374151;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background-color: #ffffff;
+}
+
+.checkbox-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.form-actions {
+    margin-top: 1rem;
+}
+
+#create-event-message {
+    margin-top: 1rem;
+    font-weight: 500;
+}
