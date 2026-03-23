@@ -8,7 +8,7 @@ func GetAll(db *sql.DB) ([]Sport, error) {
 
 	rows, err := db.Query(query)
 	if err != nil {
-		return nil, sql.ErrNoRows
+		return nil, err
 	}
 	defer rows.Close()
 

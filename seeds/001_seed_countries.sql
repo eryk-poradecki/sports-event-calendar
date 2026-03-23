@@ -247,4 +247,5 @@ INSERT INTO countries (name, code_alpha2) VALUES
   ('Western Sahara', 'EH'),
   ('Yemen', 'YE'),
   ('Zambia', 'ZM'),
-  ('Zimbabwe', 'ZW');
+  ('Zimbabwe', 'ZW')
+ON CONFLICT (code_alpha2) DO NOTHING;

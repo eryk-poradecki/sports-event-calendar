@@ -9,6 +9,7 @@ import (
 	"github.com/eryk-poradecki/sports-event-calendar/internal/competition"
 	"github.com/eryk-poradecki/sports-event-calendar/internal/sport"
 	"github.com/eryk-poradecki/sports-event-calendar/internal/team"
+	"github.com/eryk-poradecki/sports-event-calendar/internal/venue"
 )
 
 func CreateEvent(db *sql.DB, event *Event) error {
@@ -23,6 +24,12 @@ func CreateEvent(db *sql.DB, event *Event) error {
 	}
 	if event.AwayScore != nil && *event.AwayScore < 0 {
 		return fmt.Errorf("%w: away_score cannot be negative", ErrInvalidEvent)
+	}
+
+	switch event.Status {
+	case Scheduled, Finished, Cancelled:
+	default:
+		return fmt.Errorf("%w: invalid event status", ErrInvalidEvent)
 	}
 
 	now := time.Now().UTC()
@@ -73,6 +80,13 @@ func CreateEvent(db *sql.DB, event *Event) error {
 		}
 		if eventCompetition.SportID != event.SportID {
 			return fmt.Errorf("%w: competition sport must match event sport", ErrInvalidEvent)
+		}
+	}
+
+	if event.VenueID != nil {
+		_, err := venue.GetByID(db, *event.VenueID)
+		if err != nil {
+			return fmt.Errorf("%w: venue not found", ErrInvalidEvent)
 		}
 	}
 

@@ -39,3 +39,26 @@ func GetAll(db *sql.DB) ([]Venue, error) {
 	}
 	return venues, nil
 }
+
+func GetByID(db *sql.DB, id uint64) (Venue, error) {
+	var venue Venue
+	var address sql.NullString
+	var capacity sql.NullInt64
+	var websiteURL sql.NullString
+	const query = `SELECT id, name, city, _country_id, address, capacity, website_url FROM venues WHERE id = $1`
+
+	row := db.QueryRow(query, id)
+	if err := row.Scan(&venue.ID, &venue.Name, &venue.City, &venue.CountryID, &address, &capacity, &websiteURL); err != nil {
+		return venue, fmt.Errorf("could not get venue by id: %w", err)
+	}
+	if address.Valid {
+		venue.Address = &address.String
+	}
+	if capacity.Valid {
+		venue.Capacity = new(int(capacity.Int64))
+	}
+	if websiteURL.Valid {
+		venue.WebsiteURL = &websiteURL.String
+	}
+	return venue, nil
+}

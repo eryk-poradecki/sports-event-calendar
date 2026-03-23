@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/eryk-poradecki/sports-event-calendar/internal/httpx"
 )
 
 func HandleGetEventByID(db *sql.DB) http.HandlerFunc {
@@ -14,28 +15,21 @@ func HandleGetEventByID(db *sql.DB) http.HandlerFunc {
 		idStr := r.PathValue("id")
 		id, err := strconv.ParseUint(idStr, 10, 64)
 		if err != nil {
-			http.Error(w, "invalid event ID", http.StatusBadRequest)
-			log.Printf("get event failed: %v", err)
+			httpx.WriteError(w, http.StatusBadRequest, "invalid event ID", err)
 			return
 		}
 
 		ev, err := GetByID(db, id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				http.Error(w, "event not found", http.StatusNotFound)
+				httpx.WriteError(w, http.StatusNotFound, "event not found", err)
 			} else {
-				http.Error(w, "error getting event", http.StatusInternalServerError)
+				httpx.WriteError(w, http.StatusInternalServerError, "error getting event", err)
 			}
-			log.Printf("get event failed: %v", err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(ev); err != nil {
-			http.Error(w, "failed to encode response", http.StatusInternalServerError)
-			log.Printf("response encoding failed: %v", err)
-			return
-		}
+		httpx.WriteJSON(w, http.StatusOK, ev)
 	}
 }
 
@@ -51,7 +45,7 @@ func HandleGetAllEvents(db *sql.DB) http.HandlerFunc {
 		}
 		pageInt, err := strconv.Atoi(pageStr)
 		if err != nil {
-			http.Error(w, "invalid page", http.StatusBadRequest)
+			httpx.WriteError(w, http.StatusBadRequest, "invalid page", err)
 			return
 		}
 		if pageSizeStr == "" {
@@ -59,30 +53,24 @@ func HandleGetAllEvents(db *sql.DB) http.HandlerFunc {
 		}
 		pageSizeInt, err := strconv.Atoi(pageSizeStr)
 		if err != nil {
-			http.Error(w, "invalid page size", http.StatusBadRequest)
+			httpx.WriteError(w, http.StatusBadRequest, "invalid page size", err)
 			return
 		}
 		events, err := GetAllEvents(db, pageInt, pageSizeInt, sport, dateFrom, dateTo)
 		if err != nil {
 			if errors.Is(err, ErrSportNotFound) {
-				http.Error(w, "sport not found", http.StatusNotFound)
+				httpx.WriteError(w, http.StatusNotFound, "sport not found", err)
 				return
 			}
 			if errors.Is(err, ErrInvalidDate) {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				httpx.WriteError(w, http.StatusBadRequest, err.Error(), err)
 				return
 			}
-			http.Error(w, "failed to fetch events", http.StatusInternalServerError)
-			log.Printf("get events failed: %v", err)
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch events", err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(events); err != nil {
-			http.Error(w, "failed to encode response", http.StatusInternalServerError)
-			log.Printf("response encoding failed: %v", err)
-			return
-		}
+		httpx.WriteJSON(w, http.StatusOK, events)
 	}
 }
 
@@ -92,28 +80,19 @@ func HandleCreateEvent(db *sql.DB) http.HandlerFunc {
 
 		var ev Event
 		if err := json.NewDecoder(r.Body).Decode(&ev); err != nil {
-			http.Error(w, "failed to decode request body", http.StatusBadRequest)
-			log.Printf("body decode failed: %v", err)
+			httpx.WriteError(w, http.StatusBadRequest, "failed to decode request body", err)
 			return
 		}
 
 		if err := CreateEvent(db, &ev); err != nil {
 			if errors.Is(err, ErrInvalidEvent) {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				log.Printf("create event failed: %v", err)
+				httpx.WriteError(w, http.StatusBadRequest, err.Error(), err)
 				return
 			}
-			http.Error(w, "failed to create event", http.StatusBadRequest)
-			log.Printf("create event failed: %v", err)
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to create event", err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(ev); err != nil {
-			http.Error(w, "failed to encode response", http.StatusInternalServerError)
-			log.Printf("response encoding failed: %v", err)
-			return
-		}
+		httpx.WriteJSON(w, http.StatusCreated, ev)
 	}
 }

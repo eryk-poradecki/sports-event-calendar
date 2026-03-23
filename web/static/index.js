@@ -38,7 +38,6 @@ async function loadEvents(page = 1) {
     params.set("date_to", currentFilters.dateTo);
   }
 
-  console.log(params);
   const response = await fetch(`/api/v1/events?${params.toString()}`);
 
   if (!response.ok) {
@@ -136,7 +135,7 @@ function createEventRow(eventListItem) {
 
   left.appendChild(title);
 
-  if (eventListItem.competition_name) {
+  if (eventListItem.competition_name !== "") {
     const subtitle = document.createElement("div");
     subtitle.className = "event-subtitle";
     subtitle.textContent = eventListItem.sport_name;
@@ -145,7 +144,7 @@ function createEventRow(eventListItem) {
 
   const center = document.createElement("div");
   center.className = "event-match";
-  if (eventListItem.venue_name !== null) {
+  if (eventListItem.venue_name !== "") {
     center.textContent = `${eventListItem.home_team_name} vs ${eventListItem.away_team_name} at ${eventListItem.venue_name}`;
   } else {
     center.textContent = `${eventListItem.home_team_name} vs ${eventListItem.away_team_name}`;
@@ -423,8 +422,8 @@ async function submitCreateEventForm(event) {
       });
 
       if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText || "failed to create event");
+          const errorData = await response.json();
+          throw new Error(errorData.error || "failed to create event");
       }
 
       message.textContent = "Event created successfully.";
@@ -435,7 +434,7 @@ async function submitCreateEventForm(event) {
       currentPage = 1;
       await refreshEvents(currentPage);
   } catch (error) {
-      message.textContent = error;
+      message.textContent = error.message;
   }
 }
 
