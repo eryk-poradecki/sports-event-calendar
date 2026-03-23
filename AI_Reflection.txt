@@ -1,0 +1,22 @@
+I used AI tools (ChatGPT, later Codex) primarily as planning and review assistants.
+
+ChatGPT was used during the planning and decision-making process.
+I would describe how I intended to approach a task and ask to break it down into smaller, verifiable steps.
+I also used it to discuss alternative design choices and compare their strengths and weaknesses in the context of this project.
+Lastly, ChatGPT was used to generate some parts of `README.md` (e.g. project structure, endpoints table, setup commands)
+and adjust wording in the readme and this file.
+
+AI generated code was used in a limited way:
+- the seed files `002_seed_sports.sql` and `003_seed_sample_data.sql` were generated using ChatGPT,
+- some frontend parts, including `styles.css` and `event_details.html`, were also generated,
+- ChatGPT was also used to suggest small JavaScript snippets and help fix some issues in `index.js`.
+
+Since I usually work with frontend frameworks such as Vue or React and CSS tools such as Tailwind,
+I used AI support in the frontend mainly to move faster and spend more time on the backend part of the exercise.
+
+Near the end of development, I also used Codex to review the codebase for potential issues such as inconsistencies,
+missing validations, minor errors, and leftover debug code.
+Based on that review, I added a missing validation related to `Event.Status`
+and introduced shared JSON/error response helpers to make handler responses and logging more consistent.
+
+I reviewed all AI suggestions and integrated them manually (except for CSS which was copied and pasted).
